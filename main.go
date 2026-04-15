@@ -7,7 +7,9 @@ import (
 
 func main() {
 	cfg, _ := config.Read() 
-	cfg.SetUser("Lane")
-	newConfig, _ := config.Read()
-	fmt.Println(newConfig)
+	s := state{config: &cfg}
+	c := command{name: "login", args: []string{"Wei Lok"}}
+
+	handlerLogin(&s, c)
+	fmt.Println(cfg)
 }

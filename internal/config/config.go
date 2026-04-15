@@ -31,15 +31,10 @@ func Read() (Config, error) {
 	return config, nil 
 }
 
-func (config Config) SetUser(newUserName string) error {
-	config, err := Read() // get latest config struct based on current json file config
-	if err != nil {
-		return err
-	}
-
-	config.CurrentUserName = newUserName
+func (c *Config) SetUser(newUserName string) error {
+	c.CurrentUserName = newUserName
 	// convert config struct to bytes
-	bytes, err := json.Marshal(config) 
+	bytes, err := json.Marshal(c) 
 	if err != nil {
 		return err
 	}
