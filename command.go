@@ -9,7 +9,10 @@ import (
 	"context"
 	"os"
 	"github.com/google/uuid"
-
+	"net/http"
+	"io"
+	"encoding/xml"
+	"html"
 )
 
 type state struct {
@@ -115,6 +118,52 @@ func handlerListUsers(s *state, cmd command) error {
 	return nil
 }
 
+func handlerFeed(s *state, cmd command) error {
+	ctx := context.Background()
+	rssFeed, err := fetchFeed(ctx, "https://www.wagslane.dev/index.xml")
+	if err != nil {
+		return err
+	}
+	fmt.Println(rssFeed)
+	return nil
+}
+
+func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", feedURL, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	req.Header.Set("User-Agent", "Gator")
+
+	res, err := client.Do(req) 
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	bytes, err := io.ReadAll(res.Body) 
+	if err != nil {
+		return nil, err
+	}
+
+	var rssFeed RSSFeed 
+	if err := xml.Unmarshal(bytes, &rssFeed); err != nil {
+		return nil, err
+	}
+
+	rssFeed.Channel.Title = html.UnescapeString(rssFeed.Channel.Title)
+	rssFeed.Channel.Description = html.UnescapeString(rssFeed.Channel.Description)
+	for i, item := range rssFeed.Channel.Item {
+		rssFeed.Channel.Item[i].Title = html.UnescapeString(item.Title)
+		rssFeed.Channel.Item[i].Description = html.UnescapeString(item.Description)
+	}
+	return &rssFeed, nil
+}
+
 func (c *commands) run(s *state, cmd command) error {
 	// This method runs a given command with the provided state if it exists.
 	funcHandler, ok := c.handlers[cmd.name]
@@ -129,3 +178,4 @@ func (c *commands) register(name string, f func(*state, command) error) error {
 	c.handlers[name] = f
 	return nil
 }
+

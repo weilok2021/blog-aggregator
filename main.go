@@ -32,7 +32,7 @@ func main() {
 	cmds.register("register", handlerRegister)
 	cmds.register("reset", handlerReset)
 	cmds.register("users", handlerListUsers)
-
+	cmds.register("agg", handlerFeed)
 
 	cmd := command{name: os.Args[1], args: os.Args[2:]}
 	if err := cmds.run(appState, cmd); err != nil {
