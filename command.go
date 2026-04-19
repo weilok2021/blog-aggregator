@@ -164,6 +164,51 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	return &rssFeed, nil
 }
 
+func addfeed(s *state, cmd command) error {
+	if len(cmd.args) != 2 {
+		return errors.New("Add Feed command required 2 arguments!")
+	}
+
+	ctx := context.Background()
+	// feed record will make use user.ID as foreign key
+	user, err := s.db.GetUser(ctx, s.config.CurrentUserName)
+	if err != nil {
+		return err
+	}
+
+	feed, err := s.db.CreateFeed(ctx, database.CreateFeedParams{
+		ID: uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Name: cmd.args[0],
+		Url: cmd.args[1],
+		UserID: user.ID, 
+	})
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Name: %s\n", feed.Name)
+	fmt.Printf("Url: %s\n", feed.Url)
+	fmt.Printf("UserID: %v\n", feed.UserID)
+
+	return nil
+}
+
+func listfeeds(s *state, cmd command) error {
+	ctx := context.Background()
+	feeds, err := s.db.ListFeeds(ctx)
+	if err != nil {
+		return err
+	}
+	for i, feed := range feeds {
+		fmt.Printf("Feed %d:\n", i)
+		fmt.Printf("- Name: %s\n", feed.Name)
+		fmt.Printf("- Url: %s\n", feed.Url)
+		fmt.Printf("- UserName: %s\n", feed.UserName)
+	}
+	return nil
+}
+
 func (c *commands) run(s *state, cmd command) error {
 	// This method runs a given command with the provided state if it exists.
 	funcHandler, ok := c.handlers[cmd.name]

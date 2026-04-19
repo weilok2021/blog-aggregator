@@ -33,13 +33,14 @@ func main() {
 	cmds.register("reset", handlerReset)
 	cmds.register("users", handlerListUsers)
 	cmds.register("agg", handlerFeed)
+	cmds.register("addfeed", addfeed)
+	cmds.register("feeds", listfeeds)
 
 	cmd := command{name: os.Args[1], args: os.Args[2:]}
 	if err := cmds.run(appState, cmd); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	fmt.Println(cfg)
 	// start CLI application
 	// for {
 	// 	if len(os.Args) < 2 {
