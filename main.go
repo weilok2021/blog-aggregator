@@ -37,6 +37,8 @@ func main() {
 	cmds.register("feeds", listfeeds)
 	cmds.register("follow", middlewareLoggedIn(addFollow))
 	cmds.register("following", middlewareLoggedIn(listUserFollowing))
+	cmds.register("unfollow", middlewareLoggedIn(unfollow))
+
 
 	cmd := command{name: os.Args[1], args: os.Args[2:]}
 	if err := cmds.run(appState, cmd); err != nil {

@@ -180,11 +180,6 @@ func addfeed(s *state, cmd command, user database.User) error {
 	}
 
 	ctx := context.Background()
-	// // feed record will make use user.ID as foreign key
-	// user, err := s.db.GetUser(ctx, s.config.CurrentUserName)
-	// if err != nil {
-	// 	return err
-	// }
 
 	feed, err := s.db.CreateFeed(ctx, database.CreateFeedParams{
 		ID: uuid.New(),
@@ -238,11 +233,6 @@ func addFollow(s *state, cmd command, user database.User) error {
 	}
 
 	ctx := context.Background()
-	// // Get current user id
-	// user, err := s.db.GetUser(ctx, s.config.CurrentUserName)
-	// if err != nil {
-	// 	return err
-	// }
 
 	// Get feed by url, need to add new query
 	feed, err := s.db.GetFeed(ctx, cmd.args[0])
@@ -274,12 +264,6 @@ func listUserFollowing(s *state, cmd command, user database.User) error {
 
 	ctx := context.Background()
 
-	// Get current user id
-	// user, err := s.db.GetUser(ctx, s.config.CurrentUserName)
-	// if err != nil {
-	// 	return err
-	// }
-
 	followingList, err := s.db.GetFeedFollowsForUser(ctx, user.ID)
 	if err != nil {
 		return err
@@ -287,6 +271,29 @@ func listUserFollowing(s *state, cmd command, user database.User) error {
 
 	for _, following := range followingList {
 		fmt.Println(following.FeedName)
+	}
+	return nil
+}
+
+func unfollow(s *state, cmd command, user database.User) error {
+	if len(cmd.args) != 1 {
+		return errors.New("unfollow command required 1 argument: {feedUrl}")
+	}
+
+	ctx := context.Background()
+
+	// Get feed by url, use feed.ID for deletion later
+	feed, err := s.db.GetFeed(ctx, cmd.args[0])
+	if err != nil {
+		return err
+	}
+
+	// use user_id, and feed_id to execute deletion
+	if err := s.db.DeleteFeedFollow(ctx, database.DeleteFeedFollowParams {
+		UserID: user.ID,
+		FeedID: feed.ID,
+	}); err != nil {
+		return err
 	}
 	return nil
 }
