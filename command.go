@@ -35,7 +35,6 @@ func newCommands() *commands {
 	return &commands{handlers: make(map[string]commandHandler)}
 }
 
-// To handle user login, if user already existed in db, exit with status 1
 func handlerLogin(s *state, cmd command) error {
 	if len(cmd.args) < 1 {
 		return errors.New("The login handler expects a single argument, the username.")
@@ -164,17 +163,28 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	return &rssFeed, nil
 }
 
-func addfeed(s *state, cmd command) error {
+func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) error) commandHandler {
+	return func(s *state, cmd command) error {
+		user, err := s.db.GetUser(context.Background(), s.config.CurrentUserName)
+		if err != nil {
+			return err
+		}
+		return handler(s, cmd, user)
+	}
+}
+
+
+func addfeed(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 2 {
 		return errors.New("Add Feed command required 2 arguments: {feedname} {feedurl}")
 	}
 
 	ctx := context.Background()
-	// feed record will make use user.ID as foreign key
-	user, err := s.db.GetUser(ctx, s.config.CurrentUserName)
-	if err != nil {
-		return err
-	}
+	// // feed record will make use user.ID as foreign key
+	// user, err := s.db.GetUser(ctx, s.config.CurrentUserName)
+	// if err != nil {
+	// 	return err
+	// }
 
 	feed, err := s.db.CreateFeed(ctx, database.CreateFeedParams{
 		ID: uuid.New(),
@@ -222,17 +232,17 @@ func listfeeds(s *state, cmd command) error {
 	return nil
 }
 
-func addFollow(s *state, cmd command) error {
+func addFollow(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 1 {
 		return errors.New("Follow command required 1 argument: {feedUrl}")
 	}
 
 	ctx := context.Background()
-	// Get current user id
-	user, err := s.db.GetUser(ctx, s.config.CurrentUserName)
-	if err != nil {
-		return err
-	}
+	// // Get current user id
+	// user, err := s.db.GetUser(ctx, s.config.CurrentUserName)
+	// if err != nil {
+	// 	return err
+	// }
 
 	// Get feed by url, need to add new query
 	feed, err := s.db.GetFeed(ctx, cmd.args[0])
@@ -257,7 +267,7 @@ func addFollow(s *state, cmd command) error {
 	return nil
 }
 
-func listUserFollowing(s *state, cmd command) error {
+func listUserFollowing(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 0 {
 		return errors.New("This command require 0 args!")
 	}
@@ -265,10 +275,10 @@ func listUserFollowing(s *state, cmd command) error {
 	ctx := context.Background()
 
 	// Get current user id
-	user, err := s.db.GetUser(ctx, s.config.CurrentUserName)
-	if err != nil {
-		return err
-	}
+	// user, err := s.db.GetUser(ctx, s.config.CurrentUserName)
+	// if err != nil {
+	// 	return err
+	// }
 
 	followingList, err := s.db.GetFeedFollowsForUser(ctx, user.ID)
 	if err != nil {
