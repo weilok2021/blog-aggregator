@@ -35,6 +35,8 @@ func main() {
 	cmds.register("agg", handlerFeed)
 	cmds.register("addfeed", addfeed)
 	cmds.register("feeds", listfeeds)
+	cmds.register("follow", addFollow)
+	cmds.register("following", listUserFollowing)
 
 	cmd := command{name: os.Args[1], args: os.Args[2:]}
 	if err := cmds.run(appState, cmd); err != nil {

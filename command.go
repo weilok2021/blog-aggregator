@@ -166,7 +166,7 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 
 func addfeed(s *state, cmd command) error {
 	if len(cmd.args) != 2 {
-		return errors.New("Add Feed command required 2 arguments!")
+		return errors.New("Add Feed command required 2 arguments: {feedname} {feedurl}")
 	}
 
 	ctx := context.Background()
@@ -191,6 +191,19 @@ func addfeed(s *state, cmd command) error {
 	fmt.Printf("Url: %s\n", feed.Url)
 	fmt.Printf("UserID: %v\n", feed.UserID)
 
+	// create a feed follow record for the current user when they add a feed
+	feedFollow, err := s.db.CreateFeedFollow(ctx, database.CreateFeedFollowParams {
+		ID: uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		UserID: user.ID,
+		FeedID: feed.ID,
+	})
+
+	if err != nil {
+		return err
+	}	
+	fmt.Println(feedFollow)
 	return nil
 }
 
@@ -205,6 +218,65 @@ func listfeeds(s *state, cmd command) error {
 		fmt.Printf("- Name: %s\n", feed.Name)
 		fmt.Printf("- Url: %s\n", feed.Url)
 		fmt.Printf("- UserName: %s\n", feed.UserName)
+	}
+	return nil
+}
+
+func addFollow(s *state, cmd command) error {
+	if len(cmd.args) != 1 {
+		return errors.New("Follow command required 1 argument: {feedUrl}")
+	}
+
+	ctx := context.Background()
+	// Get current user id
+	user, err := s.db.GetUser(ctx, s.config.CurrentUserName)
+	if err != nil {
+		return err
+	}
+
+	// Get feed by url, need to add new query
+	feed, err := s.db.GetFeed(ctx, cmd.args[0])
+	if err != nil {
+		return err
+	}
+
+	// use user_id, and feed_id to create new feedfollow
+	feedFollow, err := s.db.CreateFeedFollow(ctx, database.CreateFeedFollowParams {
+		ID: uuid.New(),
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		UserID: user.ID,
+		FeedID: feed.ID,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(feedFollow)
+	return nil
+}
+
+func listUserFollowing(s *state, cmd command) error {
+	if len(cmd.args) != 0 {
+		return errors.New("This command require 0 args!")
+	}
+
+	ctx := context.Background()
+
+	// Get current user id
+	user, err := s.db.GetUser(ctx, s.config.CurrentUserName)
+	if err != nil {
+		return err
+	}
+
+	followingList, err := s.db.GetFeedFollowsForUser(ctx, user.ID)
+	if err != nil {
+		return err
+	}
+
+	for _, following := range followingList {
+		fmt.Println(following.FeedName)
 	}
 	return nil
 }
