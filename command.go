@@ -35,6 +35,16 @@ func newCommands() *commands {
 	return &commands{handlers: make(map[string]commandHandler)}
 }
 
+func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) error) commandHandler {
+	return func(s *state, cmd command) error {
+		user, err := s.db.GetUser(context.Background(), s.config.CurrentUserName)
+		if err != nil {
+			return err
+		}
+		return handler(s, cmd, user)
+	}
+}
+
 func handlerLogin(s *state, cmd command) error {
 	if len(cmd.args) < 1 {
 		return errors.New("The login handler expects a single argument, the username.")
@@ -163,17 +173,6 @@ func fetchFeed(ctx context.Context, feedURL string) (*RSSFeed, error) {
 	return &rssFeed, nil
 }
 
-func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) error) commandHandler {
-	return func(s *state, cmd command) error {
-		user, err := s.db.GetUser(context.Background(), s.config.CurrentUserName)
-		if err != nil {
-			return err
-		}
-		return handler(s, cmd, user)
-	}
-}
-
-
 func addfeed(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 2 {
 		return errors.New("Add Feed command required 2 arguments: {feedname} {feedurl}")
@@ -294,6 +293,48 @@ func unfollow(s *state, cmd command, user database.User) error {
 		FeedID: feed.ID,
 	}); err != nil {
 		return err
+	}
+	return nil
+}
+
+func handlerAgg(s *state, cmd command) error {
+	if len(cmd.args) != 1 {
+		return errors.New("agg command required 1 argument: {Duration for Request}")
+	}
+
+	timeBetweenRequests, err := time.ParseDuration(cmd.args[0])
+	if err != nil {
+		return err
+	}
+
+	ticker := time.NewTicker(timeBetweenRequests)
+	for ; ; <-ticker.C {
+		scrapeFeeds(s)
+	}
+}
+
+func scrapeFeeds(s *state) error {
+	ctx := context.Background()
+	// Get the next feed to fetch from the DB.
+	feed, err := s.db.GetNextFeedToFetch(ctx)
+	if err != nil {
+		return err
+	}
+
+	// Mark it as fetched.
+	if err := s.db.MarkFeedFetched(ctx, feed.ID); err != nil {
+		return err
+	}
+
+	// Fetch the feed using the URL
+	rssFeed, err := fetchFeed(ctx, feed.Url)
+	if err != nil {
+		return err
+	}
+
+	// Iterate over the items in the feed and print their titles to the console.
+	for _, item := range rssFeed.Channel.Item {
+		fmt.Println(item)
 	}
 	return nil
 }

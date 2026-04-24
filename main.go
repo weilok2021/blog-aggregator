@@ -32,12 +32,12 @@ func main() {
 	cmds.register("register", handlerRegister)
 	cmds.register("reset", handlerReset)
 	cmds.register("users", handlerListUsers)
-	cmds.register("agg", handlerFeed)
 	cmds.register("addfeed", middlewareLoggedIn(addfeed))
 	cmds.register("feeds", listfeeds)
 	cmds.register("follow", middlewareLoggedIn(addFollow))
 	cmds.register("following", middlewareLoggedIn(listUserFollowing))
 	cmds.register("unfollow", middlewareLoggedIn(unfollow))
+	cmds.register("agg", handlerAgg)
 
 
 	cmd := command{name: os.Args[1], args: os.Args[2:]}
@@ -45,11 +45,4 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	// start CLI application
-	// for {
-	// 	if len(os.Args) < 2 {
-	// 		fmt.Errorf("At least 2 CLI arguments are needed!")
-	// 		os.Exit(1)
-	// 	}
-	// }
 }
