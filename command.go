@@ -13,6 +13,7 @@ import (
 	"io"
 	"encoding/xml"
 	"html"
+	"strconv"
 )
 
 type state struct {
@@ -332,9 +333,52 @@ func scrapeFeeds(s *state) error {
 		return err
 	}
 
-	// Iterate over the items in the feed and print their titles to the console.
+	// Iterate over the items in the feed and save post into posts table
 	for _, item := range rssFeed.Channel.Item {
-		fmt.Println(item)
+		convertedPubDate, err := time.Parse(time.RFC1123Z, item.PubDate)
+		if err != nil {
+			return err
+		}
+		post, err := s.db.CreatePost(ctx, database.CreatePostParams{
+			ID: uuid.New(),
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+			Title: item.Title,
+			Url: item.Link,
+			Description: item.Description, 
+			PublishedAt: convertedPubDate,
+			FeedID: feed.ID,
+		})
+		if err != nil {
+			return err
+		}
+		fmt.Println(post)
+	}
+	return nil
+}
+
+func browse(s *state, cmd command, user database.User) error {
+	if len(cmd.args) > 1 {
+		fmt.Println("browse command takes only one optional arg: {limit}")
+		os.Exit(1)
+	}
+	numPosts := 2  // default
+	if len(cmd.args) > 0 {
+		n, err := strconv.Atoi(cmd.args[0])
+		if err != nil {
+			return err
+		}
+		numPosts = n
+	}
+	userPosts, err := s.db.GetPostForUser(context.Background(), database.GetPostForUserParams{
+		UserID: user.ID,
+		Limit: int32(numPosts),
+	})
+	if err != nil {
+		return err
+	}
+	for _, post := range userPosts {
+		fmt.Println(post)
 	}
 	return nil
 }
